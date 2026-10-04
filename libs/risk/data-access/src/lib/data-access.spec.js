@@ -82,24 +82,28 @@ describe('rx utils', () => {
     expect(backoffDelayMs(1, 100, 0, 99)).toBe(5000);
   });
   it('visiblePoll pauses while the tab is hidden and resumes when visible', async () => {
-    const target = new EventTarget();
-    const doc = Object.assign(target, { hidden: false });
-    const seen = [];
-    const sub = visiblePoll(5, doc).subscribe((n) => seen.push(n));
-    await tick(18);
-    const before = seen.length;
-    expect(before).toBeGreaterThan(1);
-    doc.hidden = true;
-    doc.dispatchEvent(new Event('visibilitychange'));
-    await tick(8);
-    const paused = seen.length;
-    await tick(20);
-    expect(seen.length).toBe(paused);
-    doc.hidden = false;
-    doc.dispatchEvent(new Event('visibilitychange'));
-    await tick(8);
-    expect(seen.length).toBeGreaterThan(paused);
-    sub.unsubscribe();
+    // Fake timers: the assertion is about scheduling logic, not wall-clock speed (real timers flake on loaded CI runners).
+    vi.useFakeTimers();
+    try {
+      const doc = Object.assign(new EventTarget(), { hidden: false });
+      const seen = [];
+      const sub = visiblePoll(5, doc).subscribe((n) => seen.push(n));
+      await vi.advanceTimersByTimeAsync(20);
+      expect(seen.length).toBe(5); // t = 0, 5, 10, 15, 20
+      doc.hidden = true;
+      doc.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(50);
+      expect(seen.length).toBe(5); // paused: nothing emitted while hidden
+      doc.hidden = false;
+      doc.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(10);
+      expect(seen.length).toBe(8); // resumes immediately, then every 5 ms
+      sub.unsubscribe();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(seen.length).toBe(8); // unsubscribed: no leak
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 describe('toAppError', () => {
