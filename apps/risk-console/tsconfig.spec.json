@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "types": ["vitest/globals"], "lib": ["ES2025", "dom", "dom.iterable"] },
+  "angularCompilerOptions": { "strictTemplates": true },
+  "include": ["src/**/*.js"]
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "types": [], "lib": ["ES2025", "dom", "dom.iterable"] },
+  "angularCompilerOptions": {
+    "strictTemplates": true,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "extendedDiagnostics": { "defaultCategory": "error" }
+  },
+  "include": ["src/**/*.js"],
+  "exclude": ["src/**/*.spec.js"]
+}

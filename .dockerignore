@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+.nx
+.angular
+ng-js
+.git
+infra/terraform
+k8s
+docs
+playwright-report
+test-results
+*.md

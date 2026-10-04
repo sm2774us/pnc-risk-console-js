@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "types": ["node"], "lib": ["ES2025", "dom"] },
+  "include": ["src/**/*.js", "playwright.config.js"]
+}

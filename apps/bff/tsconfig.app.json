@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "types": ["node"], "emitDecoratorMetadata": false },
+  "include": ["src/**/*.js"],
+  "exclude": ["src/**/*.spec.js"]
+}

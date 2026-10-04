@@ -1,0 +1,124 @@
+{
+  "name": "risk-console",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/risk-console/src",
+  "projectType": "application",
+  "prefix": "pnc",
+  "tags": ["scope:risk", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath.base}"],
+      "options": {
+        "outputPath": {
+          "base": "dist/apps/risk-console",
+          "browser": ""
+        },
+        "browser": "ng-js/apps/risk-console/src/main.ts",
+        "index": "apps/risk-console/src/index.html",
+        "tsConfig": "ng-js/tsconfig.app.json",
+        "polyfills": [],
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/risk-console/public"
+          }
+        ],
+        "styles": ["apps/risk-console/src/styles.scss"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "700kB",
+              "maximumError": "1.2MB"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "8kB",
+              "maximumError": "16kB"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production",
+      "dependsOn": [
+        {
+          "target": "ng-prep"
+        }
+      ]
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "continuous": true,
+      "options": {
+        "proxyConfig": "apps/risk-console/proxy.conf.json",
+        "port": 4200
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "risk-console:build:production"
+        },
+        "development": {
+          "buildTarget": "risk-console:build:development"
+        }
+      },
+      "defaultConfiguration": "development",
+      "dependsOn": [
+        {
+          "target": "ng-prep"
+        }
+      ]
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "tsConfig": "ng-js/tsconfig.spec.json",
+        "buildTarget": "risk-console:build:development",
+        "runner": "vitest",
+        "include": ["../../../ng-js/apps/risk-console/src/**/*.spec.ts"],
+        "coverage": true,
+        "coverageReporters": ["text-summary", "lcov"]
+      },
+      "dependsOn": [
+        {
+          "projects": ["risk-console"],
+          "target": "ng-prep"
+        }
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
+        "cwd": "apps/risk-console"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "ng-prep": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node tools/ng-mirror.mjs",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "ng-watch": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "command": "node tools/ng-mirror.mjs --watch",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

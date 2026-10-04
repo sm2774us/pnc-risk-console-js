@@ -1,0 +1,32 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "target": "ES2025",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2025"],
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "allowJs": true,
+    "checkJs": false,
+    "sourceMap": true,
+    "paths": {
+      "@pnc/shared/domain": ["./libs/shared/domain/src/index.js"],
+      "@pnc/shared/legacy-bridge": ["./libs/shared/legacy-bridge/src/index.js"],
+      "@pnc/shared/ui": ["./libs/shared/ui/src/index.js"],
+      "@pnc/risk/data-access": ["./libs/risk/data-access/src/index.js"],
+      "@pnc/risk/feature-dashboard": ["./libs/risk/feature-dashboard/src/index.js"],
+      "@pnc/risk/feature-exposure": ["./libs/risk/feature-exposure/src/index.js"],
+      "@pnc/risk/feature-accumulation": ["./libs/risk/feature-accumulation/src/index.js"],
+      "@pnc/risk/feature-policy": ["./libs/risk/feature-policy/src/index.js"]
+    }
+  }
+}
