@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [1.0.1] - 2026-10-04
+
+### Bug fixes
+
+- **docs:** solo-maintainer ruleset and cross-platform repo setup ([#2](https://github.com/sm2774us/pnc-risk-console-js/pull/2))
+- **docs:** solo-maintainer ruleset and cross-platform repo setup
+
 ## [1.0.0] - 2026-10-01
 
 ### Added
