@@ -141,7 +141,7 @@ Open the folder, accept the recommended extensions. Launch configurations live i
 3. `npm run verify` must pass locally.
 4. Commit with Conventional Commits (the `commit-msg` hook enforces it): `feat(exposure): add peril set filter`, `fix(bff): cap page size`, `docs: ...`.
 5. Push the branch and open a pull request into `main` (direct pushes to `main` are blocked). Use a **Conventional Commit PR title**, for example `feat(exposure): add peril set filter`; it becomes the squash commit and decides the next version.
-6. `ci-ok (required check)` must be green, one code-owner approval (someone other than the author) is required, and all threads must be resolved. The only merge button is **Squash and merge**; the branch is deleted automatically.
+6. `ci-ok (required check)` must be green and all threads resolved. In **team** mode a code owner other than the author must approve (`gh pr review --approve`, run by the reviewer); in **solo** mode no approval is needed (GitHub does not allow approving your own PR). The only merge button is **Squash and merge**; the branch is deleted automatically.
 7. Never edit `CHANGELOG.md` or the `package.json` version by hand. After the merge, `release.yml` proposes a release and waits for approval (Part 10).
 
 **Rule: no enhancement or bug fix merges without regression tests.** Reviewers reject changes that only touch production code.
@@ -196,75 +196,46 @@ gh repo edit --add-topic angular --add-topic nx --add-topic ag-grid --add-topic 
 
 The description is 314 characters (GitHub's limit is 350). Change it later with `gh repo edit --description "..."`. The repository is public: never commit an Ag-Grid licence key or any secret.
 
-## Part 9 · Lock down the repository (run once, in this order)
+## Part 9 · Lock down the repository (run once)
 
-Run these inside the cloned repository after the first push. `gh` fills in `:owner/:repo`.
+Two different approvals exist, and only one of them can be given to yourself:
 
-**1. Merge settings: squash only, branches deleted automatically**
+| Approval | Who can give it | Why |
+|---|---|---|
+| **Pull request review** | Someone other than the author. GitHub always rejects `gh pr review --approve` on your own PR ("Can not approve your own pull request") | Platform rule, cannot be turned off |
+| **Release and production deploy** (environment gate) | Any listed reviewer, **including you** (`prevent_self_review` is off) | Your manual click before anything is published |
 
-```bash
-gh repo edit --delete-branch-on-merge --enable-squash-merge --enable-merge-commit=false --enable-rebase-merge=false
-gh api -X PATCH repos/:owner/:repo -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY
-```
+So choose a mode once:
 
-The second command makes the squash commit use the PR title, which is what the release tooling reads.
+| Mode | Use when | Pull request rule on `main` |
+|---|---|---|
+| `team` | At least two people | PR required, **1 code-owner approval** from someone else |
+| `solo` | You are the only maintainer | PR required, **0 approvals** (you still cannot push to `main` directly, CI must be green, and the release still waits for your click) |
 
-**2. Branch protection: feature branch, pull request, manual approval**
-
-```bash
-gh api -X POST repos/:owner/:repo/rulesets --input .github/rulesets/protect-main.json
-```
-
-`protect-main` enforces on `main`: no deletion, no force push, linear history, a pull request with **one approval from a code owner**, stale approvals dismissed on new pushes, all review threads resolved, squash as the only merge method, and the single status check `ci-ok (required check)` on an up-to-date branch. Bypass is limited to the GitHub Actions app (id 15368) so the approved release job can push the version commit and tag. Humans cannot bypass.
-
-Change the ruleset later:
+**Run it (Windows, macOS, Linux; no shell tricks needed).** From inside the cloned repository, after `gh auth login` and the first push:
 
 ```bash
-gh api repos/:owner/:repo/rulesets --jq '.[] | [.id,.name] | @tsv'
-gh api -X PUT repos/:owner/:repo/rulesets/RULESET_ID --input .github/rulesets/protect-main.json
+node tools/repo-setup.mjs --mode solo --dry-run     # preview every gh call, changes nothing
+node tools/repo-setup.mjs --mode solo               # apply (use --mode team for two or more people)
+node tools/repo-setup.mjs --mode team --reviewers alice,bob   # also make them release and prod reviewers
 ```
 
-**3. No Dependabot or Renovate noise**
+It is safe to re-run: an existing `protect-main` ruleset is updated in place. Switching modes later is the same command with the other `--mode`. What it does, in order (the numbers are referenced elsewhere in this guide):
 
-```bash
-gh api -X DELETE repos/:owner/:repo/vulnerability-alerts
-gh api -X DELETE repos/:owner/:repo/automated-security-fixes
-```
-
-This turns off Dependabot alerts and security-update PRs. There is no `dependabot.yml` in the repository and the `guard` job fails any pull request that adds one (or Renovate config), so bot branches and PRs cannot appear by accident. Dependency risk is still covered by `npm audit` in every PR and by CodeQL; upgrade dependencies deliberately in normal feature PRs.
-
-**4. Workflow token: read-only by default**
-
-```bash
-gh api -X PUT repos/:owner/:repo/actions/permissions/workflow -f default_workflow_permissions=read -F can_approve_pull_request_reviews=false
-```
-
-Workflows that need more declare it per job (`release.yml`, `housekeeping.yml`). Actions can never approve pull requests.
-
-**5. Environments: the release approval gate**
-
-```bash
-ME=$(gh api user --jq .id)
-gh api -X PUT repos/:owner/:repo/environments/release --input - <<JSON
-{"prevent_self_review": false, "reviewers": [{"type": "User", "id": $ME}]}
-JSON
-gh api -X PUT repos/:owner/:repo/environments/dev
-gh api -X PUT repos/:owner/:repo/environments/prod --input - <<JSON
-{"prevent_self_review": false, "reviewers": [{"type": "User", "id": $ME}]}
-JSON
-```
-
-Add teammates to `reviewers` (numeric ids from `gh api users/NAME --jq .id`) so releases and production deploys need a human to click **Approve**.
-
-**6. Verify**
+1. **Merge settings:** squash only, head branches deleted automatically, squash commit title = PR title (the release tooling reads it). Same as `gh repo edit --delete-branch-on-merge --enable-squash-merge --enable-merge-commit=false --enable-rebase-merge=false`.
+2. **Branch protection** from `.github/rulesets/protect-main.json` (team) or `protect-main.solo.json` (solo): no deletion, no force push, linear history, pull request required, stale approvals dismissed, all threads resolved, squash only, and the single check `ci-ok (required check)` on an up-to-date branch. Bypass is limited to the GitHub Actions app (id 15368) so the approved release job can push the version commit and tag; humans cannot bypass. Manual equivalent: `gh api -X POST repos/:owner/:repo/rulesets --input .github/rulesets/protect-main.solo.json`, or `PUT .../rulesets/RULESET_ID` when it already exists (`gh api repos/:owner/:repo/rulesets --jq ".[] | [.id,.name] | @tsv"`).
+3. **No Dependabot or Renovate noise:** turns off Dependabot alerts and security-update PRs (a `404` warning here is fine: it was already off). There is no `dependabot.yml`, and the `guard` job fails any PR that adds one. Dependency risk stays covered by `npm audit` in every PR and CodeQL.
+4. **Workflow token read-only by default;** Actions can never approve PRs.
+5. **Environments:** `release` and `prod` require an approval click from the listed reviewers (you, plus `--reviewers`), self-approval allowed; `dev` is open. Without the script: Settings → Environments → `release` → tick **Required reviewers**, add yourself, and untick **Prevent self-review**.
+6. **Verify:**
 
 ```bash
 gh repo view --json visibility,description,deleteBranchOnMerge,squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed
-gh api repos/:owner/:repo/rulesets --jq '.[] | {name, enforcement}'
-gh api repos/:owner/:repo/environments --jq '.environments[].name'
+gh api repos/:owner/:repo/rulesets --jq ".[] | {name, enforcement}"
+gh api repos/:owner/:repo/environments --jq ".environments[].name"
 ```
 
-> **Working alone?** GitHub never lets an author approve their own pull request, so with one required approval a solo maintainer cannot merge. Either add a second collaborator (`gh api -X PUT repos/:owner/:repo/collaborators/USER -f permission=push`) or set `required_approving_review_count` to `0` and `require_code_owner_review` to `false` in the ruleset and `PUT` it again. The release approval gate in step 5 stays manual either way.
+Solo maintainer, day to day: `git switch -c feat/x`, push, `gh pr create`, wait for green `ci-ok`, then `gh pr merge --squash --delete-branch` (no `gh pr review --approve`: it will always fail on your own PR, and in solo mode it is not needed).
 
 ## Part 10 · Releases: automated, approval-based, no hand-edited changelog
 
@@ -310,7 +281,7 @@ If the push step fails with **GH013 / protected branch**, the ruleset bypass for
 
 
 1. Apply Terraform for your cloud (`infra/terraform/envs/aws-dev` or `gcp-dev`; see `infra/terraform/README.md`). It creates the cluster and a deploy identity trusted for this repository only.
-2. Environments `dev` and `prod` already exist from Part 9 step 5 (`prod` has required reviewers).
+2. Environments `dev` and `prod` already exist from Part 9 step 5 (`prod` requires your approval click).
 3. Set repository variables: `DEPLOY_ENABLED=true`, `CLUSTER_NAME`, and for AWS `AWS_DEPLOY_ROLE_ARN`, `AWS_REGION` (for GCP `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA`, `GCP_REGION`). Create the `bff-secrets` Secret (key `JWT_SECRET`) in the cluster.
 4. Actions → **Deploy** → choose cloud, environment and image tag.
 
@@ -333,12 +304,14 @@ If the push step fails with **GH013 / protected branch**, the ruleset bypass for
 | `nx` seems to ignore a change | Stale cache | Add `--skip-nx-cache` or `npx nx reset` |
 | WSL very slow | Repo on `/mnt/c` | Move it into `~/code` |
 | Docker: `bff` unhealthy | Port clash or build failure | `docker compose logs bff` |
-| Cannot merge my own PR | Ruleset needs one approval from someone else | See "Working alone?" in Part 9 |
+| `GraphQL: Can not approve your own pull request` (`gh pr review --approve`) | GitHub forbids self-approval, and the team ruleset requires one approval | Solo: `node tools/repo-setup.mjs --mode solo` (0 approvals), then `gh pr merge --squash --delete-branch`. Team: ask a second person to approve |
+| PR shows "Review required" and cannot merge | Ruleset is in team mode but you are alone | Same fix: switch to solo mode (re-runnable) |
+| `<<JSON` or `$(...)` errors in Command Prompt | Bash-only syntax | Use `node tools/repo-setup.mjs` (no shell syntax) |
 | `guard` fails: PR title | Title is not `type(scope): subject` | Edit the PR title; the check re-runs on edit |
 | `guard` fails: dependabot or renovate file | Automated dependency PRs are banned | Delete the file; keep Dependabot disabled (Part 9 step 3) |
 | Release run shows "Waiting" | The approval gate is working | Approve the `release` environment (Part 10) |
 | Release stops after `plan`, no approval asked | No `feat`, `fix`, `perf` or breaking commit since the last tag | Expected for docs-only changes |
 | Release: GH013 protected branch on push | Ruleset bypass missing | See the end of Part 10 |
-| `gh api .../rulesets` returns 422 | A `protect-main` ruleset already exists | Use the `PUT` form in Part 9 step 2 |
+| `gh api .../rulesets` returns 422 | A `protect-main` ruleset already exists | Re-run `node tools/repo-setup.mjs` (it updates the existing ruleset in place) |
 | Browser breakpoint lands in `ng-js/**/*.ts` | The Angular build compiles a line-for-line mirror of the `.js` sources (ADR 0008) | Debug there (read-only, same line numbers) or in Chrome DevTools; edit the `.js` original, the mirror is regenerated (`npm run dev` keeps it in sync) |
 | `Cannot find ng-js/...` or stale UI after editing | The mirror is generated, git-ignored | Run `npx nx run risk-console:ng-prep` (automatic before build, serve and tests) |

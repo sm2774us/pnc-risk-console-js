@@ -145,7 +145,7 @@
 | NFR-05 | 🟡 | Dockerfiles, Compose and manifests configured; images not built here |
 | NFR-06 | 🟡 | `k8s/base`; not rendered or validated here (no kubectl) |
 | NFR-07 | 🟡 | `infra/terraform`; not validated here (no terraform) |
-| NFR-08 | 🟡 | `.github/rulesets/protect-main.json`, `CODEOWNERS`; not imported into GitHub here |
+| NFR-08 | 🟡 | `.github/rulesets/protect-main.json` (team) and `protect-main.solo.json` (solo), `CODEOWNERS`, applied by `tools/repo-setup.mjs` (unit-tested against its dry-run plan and a stub `gh`); not imported into a real GitHub repository here |
 | NFR-09 | 🟡 | `.github/workflows/pr-verification.yml`; not run on GitHub here |
 | NFR-10 | 🟡 | `.githooks/commit-msg`; installed by `prepare`; not exercised here |
 | NFR-11 | ✅ | `npm run verify` ran end to end and exited successfully (format, lint 11, typecheck 11, test 10, build 2) |
@@ -164,7 +164,7 @@
 | Docker images | `docker compose up --build`; check `/healthz` on :8080 and the BFF health |
 | Kubernetes | `make k8s-render` then kubeconform (CI job `k8s`) |
 | Terraform | `make tf-validate` (CI job `terraform`); a real `plan` needs cloud credentials |
-| GitHub rulesets and Actions | Import `protect-main.json`, open one pull request, confirm `ci-ok (required check)` |
+| GitHub rulesets and Actions | Run `node tools/repo-setup.mjs --mode solo` (or `team`), open one pull request, confirm `ci-ok (required check)` |
 | Ag-Grid features with a licence | Set `window.__PNC_AG_LICENSE__` and exercise grouping, side bar and export by hand |
 | Accessibility with assistive tech | Manual screen-reader pass on dashboard, grid and accumulation |
 | Load | Run k6 or similar against `POST /exposures/query` at 1,000,000 rows |
